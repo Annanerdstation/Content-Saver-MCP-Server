@@ -1,70 +1,129 @@
-# Force API Key to Always Load
+# OpenAI API Key Setup
 
-## Changes Made
+## 🔒 **Security: Server-Side Only**
 
-### 1. **next.config.js** - Force load at startup
-- Explicitly declares the environment variable
-- Verifies API key on server start
-- Logs success/failure
+For security, API keys are **only** configured server-side using environment variables. Client-side storage has been removed.
 
-### 2. **scripts/check-env.js** - Pre-startup check
-- Runs **before** `npm run dev` starts
-- Checks if `.env.local` exists
-- Verifies API key is set
-- Auto-creates `.env.local` if missing
-- **Prevents server from starting** if API key is missing
+## 📋 **Setup Instructions**
 
-### 3. **package.json** - Auto-run checks
-- Added `predev` hook to check env before starting
-- Added `prebuild` hook for production builds
+### **Local Development**
 
-### 4. **app/api/chat/route.ts** - Better debugging
-- Enhanced logging to show exactly what's loaded
-- Checks multiple environment variable sources
-- Clear error messages
+1. **Create `.env.local` file** in the `web-ui` directory:
+   ```bash
+   cd web-ui
+   touch .env.local
+   ```
 
-## How It Works
+2. **Add your API key** to `.env.local`:
+   ```
+   OPENAI_API_KEY=sk-proj-your-actual-api-key-here
+   ```
 
-### Every time you run `npm run dev`:
+3. **Restart the development server**:
+   ```bash
+   npm run dev
+   ```
 
-1. ✅ `scripts/check-env.js` runs automatically
-2. ✅ Checks if `.env.local` exists
-3. ✅ Verifies `OPENAI_API_KEY` is set
-4. ✅ Creates `.env.local` if missing
-5. ✅ Stops if API key is invalid
-6. ✅ `next.config.js` logs API key status
-7. ✅ Server starts with API key loaded
+4. **Verify it's loaded**:
+   - Check the console for: `✅ OPENAI_API_KEY is configured`
+   - The chat should now use OpenAI API
 
-### Console output you'll see:
+### **Production (Vercel)**
 
-```
-🔍 Checking environment configuration...
+1. **Go to Vercel Dashboard**:
+   - Navigate to your project
+   - Go to **Settings** → **Environment Variables**
 
-📄 .env.local contents:
-   OPENAI_API_KEY = ***[SET]
+2. **Add Environment Variable**:
+   - **Name**: `OPENAI_API_KEY`
+   - **Value**: `sk-proj-your-actual-api-key-here`
+   - **Environment**: Production (and Preview if needed)
 
-✅ OPENAI_API_KEY is configured
-🚀 Starting Next.js...
+3. **Redeploy**:
+   - Vercel will automatically redeploy
+   - Or manually trigger a redeploy
 
-✅ OPENAI_API_KEY loaded: sk-proj-JzLjKM...
-```
+4. **Verify**:
+   - Test the chat feature
+   - Should work without any client-side configuration
 
-## Test It
+## ✅ **Verification**
 
-1. Stop current server (Ctrl+C)
-2. Run: `npm run dev`
-3. You should see the checks pass
-4. Test chat: Ask "do I have anything about test?"
+### **Local Development:**
+```bash
+# Check if .env.local exists
+ls -la web-ui/.env.local
 
-## If API Key Still Not Working
-
-Check server console for:
-```
-=== API Key Check ===
-OPENAI_API_KEY exists: true
-API Key prefix: sk-proj-JzLjKM...
-===================
+# Verify API key is set (without showing the key)
+grep -q "OPENAI_API_KEY=" web-ui/.env.local && echo "✅ API key is set" || echo "❌ API key not found"
 ```
 
-If you see `false`, the API key isn't loading despite these checks.
+### **Production:**
+- Check Vercel logs for API key status
+- Test chat functionality
+- Should work without any client-side setup
 
+## 🔒 **Security Features**
+
+- ✅ **Server-side only**: API keys never exposed to client
+- ✅ **Environment variables**: Secure storage
+- ✅ **No localStorage**: Removed for security
+- ✅ **Rate limiting**: 20 requests per minute per IP
+- ✅ **HTTPS required**: All requests encrypted in transit
+
+## ⚠️ **Important Notes**
+
+1. **Never commit `.env.local`**:
+   - Already in `.gitignore`
+   - Contains sensitive credentials
+
+2. **Rotate keys if exposed**:
+   - If key is compromised, rotate immediately
+   - Update in both local and production environments
+
+3. **Use different keys for dev/prod**:
+   - Different keys for different environments
+   - Easier to track usage and revoke if needed
+
+## 🚨 **Troubleshooting**
+
+### **"No API key found" error:**
+
+1. **Check `.env.local` exists**:
+   ```bash
+   ls web-ui/.env.local
+   ```
+
+2. **Check key is set**:
+   ```bash
+   grep OPENAI_API_KEY web-ui/.env.local
+   ```
+
+3. **Restart server**:
+   - Environment variables load on server start
+   - Must restart after adding/changing
+
+4. **Check format**:
+   ```
+   OPENAI_API_KEY=sk-proj-... (no quotes, no spaces around =)
+   ```
+
+### **Chat not using OpenAI:**
+
+1. **Verify API key is loaded**:
+   - Check server console logs
+   - Should see: `✅ OPENAI_API_KEY is configured`
+
+2. **Check API key is valid**:
+   - Test with OpenAI API directly
+   - Ensure key has proper permissions
+
+3. **Check rate limits**:
+   - OpenAI has usage limits
+   - Check your OpenAI dashboard
+
+## 📚 **Additional Resources**
+
+- [OpenAI API Keys](https://platform.openai.com/api-keys)
+- [Vercel Environment Variables](https://vercel.com/docs/concepts/projects/environment-variables)
+- [Next.js Environment Variables](https://nextjs.org/docs/basic-features/environment-variables)

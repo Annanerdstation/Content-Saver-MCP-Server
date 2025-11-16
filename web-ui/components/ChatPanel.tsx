@@ -57,16 +57,13 @@ export default function ChatPanel({ items, onClose, onItemSaved }: ChatPanelProp
     setLoading(true);
 
     try {
-      // Get API key from localStorage if available
-      const apiKey = typeof window !== 'undefined' ? localStorage.getItem('openai_api_key') : null;
-      
+      // API key is now server-side only (environment variables)
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: userMessage.content,
           items: items, // Send all items for context
-          apiKey: apiKey || undefined, // Send API key from localStorage
         }),
       });
 

@@ -2,6 +2,35 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ContentItem } from '@/types';
 import { saveNote, saveLink } from '@/lib/mcp-client';
 
+// Simple in-memory rate limiting (for production, use Redis or similar)
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+const RATE_LIMIT_MAX_REQUESTS = 20; // 20 requests per minute
+
+function checkRateLimit(identifier: string): boolean {
+  const now = Date.now();
+  const record = rateLimitMap.get(identifier);
+
+  if (!record || now > record.resetTime) {
+    rateLimitMap.set(identifier, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+    return true;
+  }
+
+  if (record.count >= RATE_LIMIT_MAX_REQUESTS) {
+    return false;
+  }
+
+  record.count++;
+  return true;
+}
+
+function getClientIdentifier(request: NextRequest): string {
+  // Use IP address for rate limiting
+  const forwarded = request.headers.get('x-forwarded-for');
+  const ip = forwarded ? forwarded.split(',')[0] : request.headers.get('x-real-ip') || 'unknown';
+  return ip;
+}
+
 export async function POST(request: NextRequest) {
   let body: any = {};
   let message = '';
@@ -11,7 +40,6 @@ export async function POST(request: NextRequest) {
     body = await request.json();
     message = body.message || '';
     items = body.items || [];
-    const clientApiKey = body.apiKey || ''; // API key from client (localStorage)
 
     if (!message) {
       return NextResponse.json(
@@ -20,37 +48,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if OpenAI API key is configured
-    // Priority: 1. Client-provided (from UI), 2. Environment variables
-    const apiKey = 
-      clientApiKey ||
-      process.env.OPENAI_API_KEY || 
-      process.env.NEXT_PUBLIC_OPENAI_API_KEY || 
-      '';
-    
-    // Detailed logging for debugging
-    console.log('=== API Key Check ===');
-    console.log('Client-provided API key:', !!clientApiKey);
-    console.log('OPENAI_API_KEY exists:', !!process.env.OPENAI_API_KEY);
-    console.log('NEXT_PUBLIC_OPENAI_API_KEY exists:', !!process.env.NEXT_PUBLIC_OPENAI_API_KEY);
-    console.log('Final apiKey exists:', !!apiKey);
-    console.log('API Key source:', clientApiKey ? 'UI (localStorage)' : (process.env.OPENAI_API_KEY ? 'Environment' : 'None'));
-    if (apiKey) {
-      console.log('API Key prefix:', apiKey.substring(0, 15) + '...');
+    // Rate limiting
+    const clientId = getClientIdentifier(request);
+    if (!checkRateLimit(clientId)) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded. Please try again later.' },
+        { status: 429 }
+      );
     }
-    console.log('===================');
+
+    // Security: Only use server-side environment variables
+    // Client-provided API keys are no longer accepted
+    const apiKey = process.env.OPENAI_API_KEY || '';
     
-    console.log('Chat API called:', {
-      messageLength: message.length,
-      itemsCount: items.length,
-      hasApiKey: !!apiKey,
-      apiKeySource: clientApiKey ? 'UI' : (process.env.OPENAI_API_KEY ? 'env' : 'none'),
-      apiKeyPrefix: apiKey ? apiKey.substring(0, 10) + '...' : 'none',
-    });
+    // Logging (reduced for production security)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Chat API called:', {
+        messageLength: message.length,
+        itemsCount: items.length,
+        hasApiKey: !!apiKey,
+      });
+    }
     
     if (!apiKey || apiKey.trim() === '') {
-      console.log('❌ No API key found, using fallback');
-      console.log('Available env vars with OPENAI:', Object.keys(process.env).filter(k => k.includes('OPENAI')));
       // Fallback: Simple rule-based responses
       return NextResponse.json({
         response: generateFallbackResponse(message, items),

@@ -1,47 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
 export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
-  const [apiKey, setApiKey] = useState('');
-  const [showKey, setShowKey] = useState(false);
-  const [saved, setSaved] = useState(false);
-
-  useEffect(() => {
-    if (isOpen) {
-      // Load existing API key from localStorage
-      const stored = localStorage.getItem('openai_api_key');
-      if (stored) {
-        setApiKey(stored);
-      }
-    }
-  }, [isOpen]);
-
-  const handleSave = () => {
-    if (apiKey.trim()) {
-      localStorage.setItem('openai_api_key', apiKey.trim());
-      setSaved(true);
-      setTimeout(() => {
-        setSaved(false);
-        onClose();
-      }, 1500);
-    }
-  };
-
-  const handleClear = () => {
-    localStorage.removeItem('openai_api_key');
-    setApiKey('');
-    setSaved(true);
-    setTimeout(() => {
-      setSaved(false);
-    }, 1500);
-  };
-
   if (!isOpen) return null;
 
   return (
@@ -76,110 +40,114 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         </h2>
 
         <div style={{ marginBottom: '20px' }}>
-          <label
+          <h3
             style={{
-              display: 'block',
-              marginBottom: '8px',
-              fontSize: '14px',
+              margin: '0 0 12px 0',
+              fontSize: '16px',
               fontWeight: '500',
               color: '#333',
             }}
           >
-            OpenAI API Key
-          </label>
-          <div style={{ position: 'relative' }}>
-            <input
-              type={showKey ? 'text' : 'password'}
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="sk-proj-..."
-              style={{
-                width: '100%',
-                padding: '10px 40px 10px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '14px',
-                fontFamily: 'monospace',
-              }}
-            />
-            <button
-              type="button"
-              onClick={() => setShowKey(!showKey)}
-              style={{
-                position: 'absolute',
-                right: '8px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: '14px',
-                color: '#666',
-                padding: '4px 8px',
-              }}
-            >
-              {showKey ? '🙈' : '👁️'}
-            </button>
-          </div>
-          <p
-            style={{
-              marginTop: '8px',
-              fontSize: '12px',
-              color: '#666',
-              lineHeight: '1.4',
-            }}
-          >
-            Your API key is stored locally in your browser. It's never sent to our servers except
-            when making requests to OpenAI.
-          </p>
-        </div>
-
-        {saved && (
+            OpenAI API Key Configuration
+          </h3>
+          
           <div
             style={{
-              padding: '10px',
-              backgroundColor: '#d4edda',
-              color: '#155724',
-              borderRadius: '4px',
-              marginBottom: '16px',
-              fontSize: '14px',
+              padding: '16px',
+              backgroundColor: '#f8f9fa',
+              borderRadius: '6px',
+              border: '1px solid #e9ecef',
             }}
           >
-            ✅ Settings saved!
+            <p
+              style={{
+                margin: '0 0 12px 0',
+                fontSize: '14px',
+                color: '#495057',
+                lineHeight: '1.6',
+              }}
+            >
+              For security, API keys must be configured server-side using environment variables.
+            </p>
+
+            <div style={{ marginBottom: '16px' }}>
+              <h4
+                style={{
+                  margin: '0 0 8px 0',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: '#212529',
+                }}
+              >
+                Local Development:
+              </h4>
+              <ol
+                style={{
+                  margin: '0 0 0 20px',
+                  padding: 0,
+                  fontSize: '13px',
+                  color: '#495057',
+                  lineHeight: '1.8',
+                }}
+              >
+                <li>Create <code style={{ backgroundColor: '#e9ecef', padding: '2px 6px', borderRadius: '3px' }}>.env.local</code> in the <code style={{ backgroundColor: '#e9ecef', padding: '2px 6px', borderRadius: '3px' }}>web-ui</code> directory</li>
+                <li>Add: <code style={{ backgroundColor: '#e9ecef', padding: '2px 6px', borderRadius: '3px' }}>OPENAI_API_KEY=your-api-key-here</code></li>
+                <li>Restart the development server</li>
+              </ol>
+            </div>
+
+            <div>
+              <h4
+                style={{
+                  margin: '0 0 8px 0',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: '#212529',
+                }}
+              >
+                Production (Vercel):
+              </h4>
+              <ol
+                style={{
+                  margin: '0 0 0 20px',
+                  padding: 0,
+                  fontSize: '13px',
+                  color: '#495057',
+                  lineHeight: '1.8',
+                }}
+              >
+                <li>Go to your Vercel project dashboard</li>
+                <li>Navigate to Settings → Environment Variables</li>
+                <li>Add <code style={{ backgroundColor: '#e9ecef', padding: '2px 6px', borderRadius: '3px' }}>OPENAI_API_KEY</code> with your key</li>
+                <li>Redeploy your application</li>
+              </ol>
+            </div>
           </div>
-        )}
+
+          <div
+            style={{
+              marginTop: '16px',
+              padding: '12px',
+              backgroundColor: '#fff3cd',
+              border: '1px solid #ffc107',
+              borderRadius: '6px',
+            }}
+          >
+            <p
+              style={{
+                margin: 0,
+                fontSize: '13px',
+                color: '#856404',
+                lineHeight: '1.6',
+              }}
+            >
+              <strong>🔒 Security Note:</strong> API keys are never stored in the browser or sent from the client. 
+              They are only accessible server-side for maximum security.
+            </p>
+          </div>
+        </div>
 
         <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-          <button
-            type="button"
-            onClick={handleClear}
-            style={{
-              padding: '8px 16px',
-              border: '1px solid #ddd',
-              borderRadius: '6px',
-              background: '#fff',
-              cursor: 'pointer',
-              fontSize: '14px',
-            }}
-          >
-            Clear
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            style={{
-              padding: '8px 16px',
-              border: 'none',
-              borderRadius: '6px',
-              background: '#0070f3',
-              color: '#fff',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: '500',
-            }}
-          >
-            Save
-          </button>
           <button
             type="button"
             onClick={onClose}
@@ -192,11 +160,10 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               fontSize: '14px',
             }}
           >
-            Cancel
+            Close
           </button>
         </div>
       </div>
     </div>
   );
 }
-
