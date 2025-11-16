@@ -102,31 +102,19 @@ async function callMCPTool(name: string, args: any): Promise<any> {
 
 /**
  * Get direct storage access for read operations
- * Handles both local development and Vercel deployment
+ * Uses local storage implementation (works on Vercel)
  */
 async function getDirectStorage(): Promise<any> {
   try {
-    // Try importing from parent directory (local development)
-    // This path works when web-ui is in a subdirectory
-    const storageModule = await import('../../dist/storage.js');
-    const Storage = storageModule.Storage;
+    // Use local storage implementation (always available)
+    // Dynamic import to ensure it's only loaded server-side
+    const { Storage } = await import('./storage');
     const storage = new Storage();
     await storage.initialize();
     return storage;
   } catch (error) {
-    // Fallback: try absolute path
-    try {
-      const { join } = await import('path');
-      const storagePath = join(process.cwd(), '..', 'dist', 'storage.js');
-      const storageModule = await import(storagePath);
-      const Storage = storageModule.Storage;
-      const storage = new Storage();
-      await storage.initialize();
-      return storage;
-    } catch (fallbackError) {
-      console.error('Failed to import storage:', fallbackError);
-      throw new Error('Storage module not found. Make sure the MCP server is built.');
-    }
+    console.error('Failed to initialize storage:', error);
+    throw new Error('Storage initialization failed');
   }
 }
 
