@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "content-saver": {
+      "command": "node",
+      "args": [
+        "/Users/annagorozia/Documents/GitHub/Content-Saver-MCP-Server/dist/index.js"
+      ]
+    }
+  }
+}
+
