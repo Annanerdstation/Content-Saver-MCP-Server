@@ -7,7 +7,17 @@ import { existsSync } from 'fs';
 import { join } from 'path';
 import { ContentItem, SaveResult } from '../types';
 
-const STORAGE_DIR = join(process.cwd(), '.content-saver');
+// Use /tmp on Vercel (writable), or .content-saver in project root for local dev
+const getStoragePath = () => {
+  // On Vercel, use /tmp (writable directory)
+  if (process.env.VERCEL || process.env.VERCEL_ENV) {
+    return join('/tmp', '.content-saver');
+  }
+  // Local development: use project root
+  return join(process.cwd(), '.content-saver');
+};
+
+const STORAGE_DIR = getStoragePath();
 const STORAGE_FILE = join(STORAGE_DIR, 'items.json');
 
 /**
@@ -20,39 +30,57 @@ export class Storage {
    * Initialize storage - load existing items or create storage directory
    */
   async initialize(): Promise<void> {
-    // Create storage directory if it doesn't exist
-    if (!existsSync(STORAGE_DIR)) {
-      await mkdir(STORAGE_DIR, { recursive: true });
-    }
+    try {
+      // Create storage directory if it doesn't exist
+      if (!existsSync(STORAGE_DIR)) {
+        await mkdir(STORAGE_DIR, { recursive: true });
+      }
 
-    // Load existing items if file exists
-    if (existsSync(STORAGE_FILE)) {
-      try {
-        const data = await readFile(STORAGE_FILE, 'utf-8');
-        this.items = JSON.parse(data);
-        // Validate that loaded data is an array
-        if (!Array.isArray(this.items)) {
+      // Load existing items if file exists
+      if (existsSync(STORAGE_FILE)) {
+        try {
+          const data = await readFile(STORAGE_FILE, 'utf-8');
+          this.items = JSON.parse(data);
+          // Validate that loaded data is an array
+          if (!Array.isArray(this.items)) {
+            this.items = [];
+          }
+        } catch (error) {
+          // If file is corrupted, start fresh
+          console.error('Error loading storage file, starting fresh:', error);
           this.items = [];
         }
-      } catch (error) {
-        // If file is corrupted, start fresh
-        console.error('Error loading storage file, starting fresh:', error);
+      } else {
+        // File doesn't exist, start with empty array
         this.items = [];
       }
+    } catch (error) {
+      // If directory creation fails (e.g., read-only filesystem), start with empty array
+      console.warn('Storage initialization warning (using in-memory only):', error instanceof Error ? error.message : String(error));
+      this.items = [];
     }
   }
 
   /**
    * Save items to disk (atomic write)
+   * On Vercel, this may fail silently if /tmp is not available
    */
   private async persist(): Promise<void> {
     try {
+      // Ensure directory exists
+      if (!existsSync(STORAGE_DIR)) {
+        await mkdir(STORAGE_DIR, { recursive: true });
+      }
+      
       // Write to temp file first, then rename (atomic operation)
       const tempFile = `${STORAGE_FILE}.tmp`;
       await writeFile(tempFile, JSON.stringify(this.items, null, 2), 'utf-8');
       await writeFile(STORAGE_FILE, JSON.stringify(this.items, null, 2), 'utf-8');
     } catch (error) {
-      throw new Error(`Failed to persist storage: ${error}`);
+      // On Vercel, if write fails, continue with in-memory storage
+      // Data will be lost on function restart, but app continues to work
+      console.warn('Failed to persist storage (using in-memory only):', error instanceof Error ? error.message : String(error));
+      // Don't throw - allow app to continue with in-memory storage
     }
   }
 
