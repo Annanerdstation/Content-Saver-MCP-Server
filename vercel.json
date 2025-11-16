@@ -1,7 +1,7 @@
 {
-  "buildCommand": "cd web-ui && npm install && npm run build",
-  "outputDirectory": "web-ui/.next",
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "installCommand": "npm install",
   "framework": "nextjs",
-  "installCommand": "cd web-ui && npm install"
+  "rootDirectory": "web-ui"
 }
-
